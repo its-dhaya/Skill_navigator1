@@ -14,6 +14,8 @@ const SidebarAndProfile = () => {
     gitHub: '',
     languages: '',
   });
+  const [selectedLanguages, setSelectedLanguages] = useState([]);
+  const [customLanguage, setCustomLanguage] = useState('');
   const [errors, setErrors] = useState({});
 
   const handleFileChange = (e) => {
@@ -42,20 +44,43 @@ const SidebarAndProfile = () => {
     setErrors({ ...errors, [name]: '' }); // Clear error message on change
   };
 
+  const handleLanguageSelect = (e) => {
+    const { value } = e.target;
+    if (value && !selectedLanguages.includes(value)) {
+      setSelectedLanguages([...selectedLanguages, value]);
+      setFormData({ ...formData, languages: '' }); // Reset dropdown
+    }
+  };
+
+  const handleCustomLanguageAdd = () => {
+    if (customLanguage && !selectedLanguages.includes(customLanguage)) {
+      setSelectedLanguages([...selectedLanguages, customLanguage]);
+      setCustomLanguage('');
+    }
+  };
+
+  const handleRemoveLanguage = (language) => {
+    setSelectedLanguages(selectedLanguages.filter((lang) => lang !== language));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     let validationErrors = {};
-    
+
     // Validate each field
     for (const key in formData) {
       if (formData[key] === '') {
-        validationErrors[key] =`Please fill the ${key} field.`;
+        validationErrors[key] = `Please fill the ${key} field.`;
       }
     }
 
     if (certifications.length === 0) {
       validationErrors.certifications = 'Please upload at least one certification.';
+    }
+
+    if (selectedLanguages.length === 0) {
+      validationErrors.languages = 'Please select at least one language.';
     }
 
     if (Object.keys(validationErrors).length > 0) {
@@ -108,28 +133,13 @@ const SidebarAndProfile = () => {
         
         {/* Links */}
         <div className="flex flex-col mt-10 mb-auto">
-          <a
-            href="/home"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-4 hover:bg-blue-100 w-full text-left block text-blue-600"
-          >
+          <a href="/home" target="_blank" rel="noopener noreferrer" className="px-6 py-4 hover:bg-blue-100 w-full text-left block text-blue-600">
             Home
           </a>
-          <a
-            href="/home"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-4 hover:bg-blue-100 w-full text-left block text-blue-600"
-          >
+          <a href="/courses" target="_blank" rel="noopener noreferrer" className="px-6 py-4 hover:bg-blue-100 w-full text-left block text-blue-600">
             Courses
           </a>
-          <a
-            href="/signup"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-4 hover:bg-blue-100 w-full text-left block text-blue-600"
-          >
+          <a href="/activity" target="_blank" rel="noopener noreferrer" className="px-6 py-4 hover:bg-blue-100 w-full text-left block text-blue-600">
             Activity
           </a>
         </div>
@@ -211,9 +221,7 @@ const SidebarAndProfile = () => {
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-700">Phone Number</label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 border border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-                    +91
-                  </span>
+                  <span className="inline-flex items-center px-3 border border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">+91</span>
                   <input
                     type="text"
                     name="phone"
@@ -242,14 +250,14 @@ const SidebarAndProfile = () => {
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">Certifications</label>
               <div className="relative">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="opacity-0 absolute z-10 cursor-pointer w-full h-full"
-                />
-                <button type="button" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+                <button type="button" className="bg-blue-500 text-white px-4 py-2 rounded-md relative overflow-hidden">
                   Upload Certifications
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+                  />
                 </button>
               </div>
               <ul className="mt-2">
@@ -269,41 +277,56 @@ const SidebarAndProfile = () => {
               {errors.certifications && <p className="text-red-500 text-sm">{errors.certifications}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">LinkedIn Profile</label>
-                <input
-                  type="text"
-                  name="linkedIn"
-                  placeholder="Enter your LinkedIn URL"
-                  value={formData.linkedIn}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              <div>
-                <label className="block mb-2 text-sm font-medium text-gray-700">GitHub Profile</label>
-                <input
-                  type="text"
-                  name="gitHub"
-                  placeholder="Enter your GitHub URL"
-                  value={formData.gitHub}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">Languages</label>
+              <select
+                name="languages"
+                onChange={handleLanguageSelect}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">Select Language</option>
+                <option value="JavaScript">JavaScript</option>
+                <option value="Python">Python</option>
+                <option value="Java">Java</option>
+                <option value="C#">C#</option>
+                <option value="C++">C++</option>
+                <option value="Ruby">Ruby</option>
+                <option value="Go">Go</option>
+                <option value="Swift">Swift</option>
+                <option value="PHP">PHP</option>
+              </select>
               <input
                 type="text"
-                name="languages"
-                placeholder="Enter languages you know"
-                value={formData.languages}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="Add a custom language"
+                value={customLanguage}
+                onChange={(e) => setCustomLanguage(e.target.value)}
+                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
+              <button
+                type="button"
+                onClick={handleCustomLanguageAdd}
+                className="bg-blue-500 text-white mt-2 px-4 py-2 rounded-md"
+              >
+                Add Language
+              </button>
+              {errors.languages && <p className="text-red-500 text-sm">{errors.languages}</p>}
+              {/* Display the list of selected languages */}
+              {selectedLanguages.length > 0 && (
+                <ul className="mt-2 text-sm text-gray-700">
+                  {selectedLanguages.map((language, index) => (
+                    <li key={index} className="flex items-center justify-between">
+                      <span>{language}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLanguage(language)}
+                        className="text-red-500"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="flex justify-end gap-4 mt-6">
