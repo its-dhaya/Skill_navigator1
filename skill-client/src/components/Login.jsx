@@ -15,7 +15,7 @@ const Login = () => {
 
     try {
       // Make a POST request with email and password in the request body
-      const response = await axios.post("http://192.168.176.47:5000/api/login", {
+      const response = await axios.post("http://localhost:5000/api/login", {
         email,
         password
       });
