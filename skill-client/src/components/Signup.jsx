@@ -30,8 +30,8 @@ const SignUp = () => {
   } catch (err) {
     console.error(err);
     setError("An error occurred during signup. Please try again."); // Set error message
-    }
-  };
+    }
+  };
 
   const inputVariant = {
     hover: {
