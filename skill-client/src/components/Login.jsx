@@ -1,21 +1,38 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion"; // Import framer-motion for animations
+import { motion } from "framer-motion";
+import axios from "axios";
 
 const Login = () => {
-  const navigate = useNavigate(); // Initialize useNavigate for navigation
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/profile"); // Redirect to profile page on login
+
+    try {
+      // Make a POST request with email and password in the request body
+      const response = await axios.post("http://192.168.176.47:5000/api/login", {
+        email,
+        password
+      });
+
+      if (response.status === 200) {
+        localStorage.setItem('authToken', response.data.token);
+        navigate("/profile");
+      }
+    } catch (error) {
+      console.error("Login error:", error.response ? error.response.data : error.message);
+      setError(error.response ? error.response.data.error : "An error occurred. Please check your network connection.");
+    }
   };
 
   const handleSignUpClick = (e) => {
-    e.preventDefault(); // Prevent the default behavior of the anchor tag
-    navigate("/signup"); // Redirect to signup page
+    e.preventDefault();
+    navigate("/signup");
   };
 
   const inputVariant = {
@@ -76,7 +93,6 @@ const Login = () => {
             className="w-full h-full object-cover"
           />
         </motion.div>
-        
 
         <motion.div
           className="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center h-full"
@@ -97,6 +113,13 @@ const Login = () => {
               Sign up
             </a>
           </p>
+
+          {error && (
+            <div className="bg-red-200 text-red-700 p-3 rounded-lg mt-4">
+              {error}
+            </div>
+          )}
+
           <form className="mt-6 flex flex-col" onSubmit={handleSubmit}>
             <motion.div
               className="relative mt-4"

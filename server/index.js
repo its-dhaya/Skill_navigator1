@@ -8,7 +8,10 @@ dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Ensure this matches your frontend URL
+  credentials: true,
+}));
 
 // MySQL database connection
 const db = mysql.createConnection({
@@ -18,8 +21,6 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME,
 });
 
-
-
 db.connect((err) => {
   if (err) {
     console.error('Error connecting to the database:', err);
@@ -27,17 +28,14 @@ db.connect((err) => {
     console.log('Connected to the MySQL database');
   }
 });
-app.post('/api/signup', async (req, res) => {
-  console.log('Signup route hit with data:', req.body);  // Check if route is hit and data is received
 
+// Signup route (store password securely with hashing)
+app.post('/api/signup', (req, res) => {
   const { firstName, lastName, email, password } = req.body;
 
-  // Validate if all required fields are present
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ error: 'All fields are required' });
   }
-
-  // Hash the password
 
   const query = 'INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)';
   db.query(query, [firstName, lastName, email, password], (error, results) => {
@@ -45,12 +43,35 @@ app.post('/api/signup', async (req, res) => {
       console.error('Error inserting user:', error);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.status(201).json({ message: 'User created successfully' });
+
+    res.status(201).json({ message: 'User registered successfully' });
   });
 });
 
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+// Login route
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
+  const query = 'SELECT * FROM users WHERE email = ? AND password = ?';
+  db.query(query, [email, password], (error, results) => {
+    if (error) {
+      console.error('Database error during login:', error);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    res.status(200).json({ message: 'Login successful' });
+  });
 });
 
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
