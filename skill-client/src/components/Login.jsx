@@ -1,16 +1,40 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion"; // Import framer-motion for animations
+import { motion } from "framer-motion";
+import axios from 'axios'
 
 const Login = () => {
   const navigate = useNavigate(); // Initialize useNavigate for navigation
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(""); // Error state for form validation
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/profile"); // Redirect to profile page on login
+    
+    if (!email || !password) {
+      setError("Please fill in both fields.");
+      return;
+    }
+  
+    try {
+      // Send GET request using axios with email and password in the URL
+      const response = await axios.get(`http://localhost:5000/api/login`);
+  
+      const data = response.data;
+  
+      if (response.status === 200) {
+        setError(""); // Clear error
+        localStorage.setItem('token', data.token); // Store the token
+        navigate("/profile");
+      } else {
+        setError(data.error || 'Something went wrong');
+      }
+    } catch (err) {
+      console.error("Error logging in:", err);
+      setError('Server error. Please try again later.');
+    }
   };
 
   const handleSignUpClick = (e) => {
@@ -64,6 +88,7 @@ const Login = () => {
         animate="visible"
         transition={{ duration: 1.5, ease: "easeInOut" }}
       >
+        {/* Image Section */}
         <motion.div
           className="hidden md:flex md:w-1/2 bg-white"
           initial={{ opacity: 0, x: -50 }}
@@ -76,8 +101,8 @@ const Login = () => {
             className="w-full h-full object-cover"
           />
         </motion.div>
-        
 
+        {/* Form Section */}
         <motion.div
           className="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center h-full"
           initial={{ opacity: 0, y: 50 }}
@@ -97,6 +122,11 @@ const Login = () => {
               Sign up
             </a>
           </p>
+
+          {/* Display Error Message */}
+          {error && <p className="mt-4 text-red-600">{error}</p>}
+
+          {/* Form Input Fields */}
           <form className="mt-6 flex flex-col" onSubmit={handleSubmit}>
             <motion.div
               className="relative mt-4"
@@ -115,7 +145,7 @@ const Login = () => {
               {email.length === 0 && (
                 <motion.label
                   htmlFor="email"
-                  className="absolute left-4 top-2 text-gray-400 pointer-events-none"
+                  className="absolute left-4 top-2 text-gray-400"
                   variants={placeholderVariant}
                 >
                   E-mail
@@ -131,7 +161,7 @@ const Login = () => {
             >
               <motion.input
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg bg-white placeholder-transparent text-black focus:outline-none"
@@ -140,7 +170,7 @@ const Login = () => {
               {password.length === 0 && (
                 <motion.label
                   htmlFor="password"
-                  className="absolute left-4 top-2 text-gray-400 pointer-events-none"
+                  className="absolute left-4 top-2 text-gray-400"
                   variants={placeholderVariant}
                 >
                   Password
@@ -148,44 +178,17 @@ const Login = () => {
               )}
             </motion.div>
 
-            <div className="mt-4 flex items-center">
-              <input
-                type="checkbox"
-                id="terms"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
-                Terms & Conditions Apply
-              </label>
-            </div>
+            {/* Submit Button */}
             <motion.button
               type="submit"
-              className="w-full mt-6 bg-blue-500 text-white py-2 rounded-lg"
+              className="w-full mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               variants={buttonVariant}
               whileHover="hover"
               whileTap="tap"
             >
-              Login
+              Log In
             </motion.button>
           </form>
-          <div className="flex items-center justify-center mt-6">
-            <span className="border-t border-gray-300 w-1/4"></span>
-            <span className="text-gray-500 mx-4">or</span>
-            <span className="border-t border-gray-300 w-1/4"></span>
-          </div>
-          <motion.button
-            className="w-full mt-6 bg-gray-100 text-gray-800 py-2 rounded-lg border border-gray-300 flex items-center justify-center"
-            variants={buttonVariant}
-            whileHover="hover"
-            whileTap="tap"
-          >
-            <img
-              src="src/assets/google.png"
-              alt="Google Icon"
-              className="w-5 h-5 mr-2"
-            />
-            Continue with Google
-          </motion.button>
         </motion.div>
       </motion.div>
     </motion.div>
