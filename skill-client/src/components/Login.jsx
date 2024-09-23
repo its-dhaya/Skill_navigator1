@@ -1,45 +1,38 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import axios from 'axios'
+import axios from "axios";
 
 const Login = () => {
-  const navigate = useNavigate(); // Initialize useNavigate for navigation
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); // Error state for form validation
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      setError("Please fill in both fields.");
-      return;
-    }
-  
+
     try {
-      // Send GET request using axios with email and password in the URL
-      const response = await axios.get(`http://localhost:5000/api/login`);
-  
-      const data = response.data;
-  
+      // Make a POST request with email and password in the request body
+      const response = await axios.post("http://localhost:5000/api/login", {
+        email,
+        password
+      });
+
       if (response.status === 200) {
-        setError(""); // Clear error
-        localStorage.setItem('token', data.token); // Store the token
+        localStorage.setItem('authToken', response.data.token);
         navigate("/profile");
-      } else {
-        setError(data.error || 'Something went wrong');
       }
-    } catch (err) {
-      console.error("Error logging in:", err);
-      setError('Server error. Please try again later.');
+    } catch (error) {
+      console.error("Login error:", error.response ? error.response.data : error.message);
+      setError(error.response ? error.response.data.error : "An error occurred. Please check your network connection.");
     }
   };
 
   const handleSignUpClick = (e) => {
-    e.preventDefault(); // Prevent the default behavior of the anchor tag
-    navigate("/signup"); // Redirect to signup page
+    e.preventDefault();
+    navigate("/signup");
   };
 
   const inputVariant = {
@@ -88,7 +81,6 @@ const Login = () => {
         animate="visible"
         transition={{ duration: 1.5, ease: "easeInOut" }}
       >
-        {/* Image Section */}
         <motion.div
           className="hidden md:flex md:w-1/2 bg-white"
           initial={{ opacity: 0, x: -50 }}
@@ -102,7 +94,6 @@ const Login = () => {
           />
         </motion.div>
 
-        {/* Form Section */}
         <motion.div
           className="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center h-full"
           initial={{ opacity: 0, y: 50 }}
@@ -123,10 +114,12 @@ const Login = () => {
             </a>
           </p>
 
-          {/* Display Error Message */}
-          {error && <p className="mt-4 text-red-600">{error}</p>}
+          {error && (
+            <div className="bg-red-200 text-red-700 p-3 rounded-lg mt-4">
+              {error}
+            </div>
+          )}
 
-          {/* Form Input Fields */}
           <form className="mt-6 flex flex-col" onSubmit={handleSubmit}>
             <motion.div
               className="relative mt-4"
@@ -145,7 +138,7 @@ const Login = () => {
               {email.length === 0 && (
                 <motion.label
                   htmlFor="email"
-                  className="absolute left-4 top-2 text-gray-400"
+                  className="absolute left-4 top-2 text-gray-400 pointer-events-none"
                   variants={placeholderVariant}
                 >
                   E-mail
@@ -161,7 +154,7 @@ const Login = () => {
             >
               <motion.input
                 type="password"
-                placeholder="Password"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg bg-white placeholder-transparent text-black focus:outline-none"
@@ -170,7 +163,7 @@ const Login = () => {
               {password.length === 0 && (
                 <motion.label
                   htmlFor="password"
-                  className="absolute left-4 top-2 text-gray-400"
+                  className="absolute left-4 top-2 text-gray-400 pointer-events-none"
                   variants={placeholderVariant}
                 >
                   Password
@@ -178,17 +171,44 @@ const Login = () => {
               )}
             </motion.div>
 
-            {/* Submit Button */}
+            <div className="mt-4 flex items-center">
+              <input
+                type="checkbox"
+                id="terms"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
+                Terms & Conditions Apply
+              </label>
+            </div>
             <motion.button
               type="submit"
-              className="w-full mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className="w-full mt-6 bg-blue-500 text-white py-2 rounded-lg"
               variants={buttonVariant}
               whileHover="hover"
               whileTap="tap"
             >
-              Log In
+              Login
             </motion.button>
           </form>
+          <div className="flex items-center justify-center mt-6">
+            <span className="border-t border-gray-300 w-1/4"></span>
+            <span className="text-gray-500 mx-4">or</span>
+            <span className="border-t border-gray-300 w-1/4"></span>
+          </div>
+          <motion.button
+            className="w-full mt-6 bg-gray-100 text-gray-800 py-2 rounded-lg border border-gray-300 flex items-center justify-center"
+            variants={buttonVariant}
+            whileHover="hover"
+            whileTap="tap"
+          >
+            <img
+              src="src/assets/google.png"
+              alt="Google Icon"
+              className="w-5 h-5 mr-2"
+            />
+            Continue with Google
+          </motion.button>
         </motion.div>
       </motion.div>
     </motion.div>

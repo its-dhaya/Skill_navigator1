@@ -1,11 +1,9 @@
-// Required modules
 const express = require('express');
-const mysql = require('mysql2');
+const mysql = require('mysql');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const bcrypt = require('bcrypt'); // For password hashing
-const jwt = require('jsonwebtoken'); // For token creation
+const { OAuth2Client } = require('google-auth-library');
 
 dotenv.config();
 
@@ -15,6 +13,8 @@ app.use(cors({
   origin: 'http://localhost:5173', // Ensure this matches your frontend URL
   credentials: true,
 }));
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // MySQL database connection
 const db = mysql.createConnection({
@@ -32,70 +32,145 @@ db.connect((err) => {
   }
 });
 
-// Signup route (store password securely with hashing)
-app.post('/api/signup', async (req, res) => {
+// Signup route
+app.post('/api/signup', (req, res) => {
   const { firstName, lastName, email, password } = req.body;
 
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
-  try {
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+  const checkQuery = 'SELECT * FROM users WHERE email = ?';
+  db.query(checkQuery, [email], (err, result) => {
+    if (err) {
+      console.error('Error checking user:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (result.length > 0) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
 
     const query = 'INSERT INTO users (first_name, last_name, email, password) VALUES (?, ?, ?, ?)';
-    db.query(query, [firstName, lastName, email, hashedPassword], (error, results) => {
+    db.query(query, [firstName, lastName, email, password], (error) => {
       if (error) {
         console.error('Error inserting user:', error);
         return res.status(500).json({ error: 'Database error' });
       }
       res.status(201).json({ message: 'User created successfully' });
     });
-  } catch (err) {
-    console.error('Error hashing password:', err);
-    res.status(500).json({ error: 'Server error' });
+  });
+});
+
+// Google login route
+app.post('/api/google-login', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const { email_verified, email, name } = ticket.getPayload();
+
+    if (email_verified) {
+      const checkQuery = 'SELECT * FROM users WHERE email = ?';
+      db.query(checkQuery, [email], (err, result) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (result.length > 0) {
+          return res.status(200).json({ message: 'Login successful', user: result[0] });
+        } else {
+          const insertQuery = 'INSERT INTO users (email, first_name) VALUES (?, ?)';
+          db.query(insertQuery, [email, name], (err) => {
+            if (err) {
+              return res.status(500).json({ error: 'Database error' });
+            }
+            return res.status(201).json({ message: 'User created successfully' });
+          });
+        }
+      });
+    } else {
+      return res.status(400).json({ error: 'Email not verified' });
+    }
+  } catch (error) {
+    console.error('Error during Google login:', error);
+    return res.status(500).json({ error: 'Authentication error' });
   }
 });
 
-// Login route using GET method
-app.get('/api/login', async (req, res) => {
-  const { email, password } = req.params;
+// Update Profile route
+app.post('/api/updateProfile', (req, res) => {
+  const { firstName, lastName, degree, specialization, phone, email, linkedIn, gitHub, languages, certifications } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required to update the profile' });
+  }
+
+  const sql = `
+    INSERT INTO user_profiles (first_name, last_name, degree, specialization, phone, email, linkedIn, gitHub, languages, certifications)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      first_name = VALUES(first_name),
+      last_name = VALUES(last_name),
+      degree = VALUES(degree),
+      specialization = VALUES(specialization),
+      phone = VALUES(phone),
+      linkedIn = VALUES(linkedIn),
+      gitHub = VALUES(gitHub),
+      languages = VALUES(languages),
+      certifications = VALUES(certifications);
+  `;
+
+  db.query(sql, [
+    firstName,
+    lastName,
+    degree,
+    specialization,
+    phone,
+    email,
+    linkedIn,
+    gitHub,
+    JSON.stringify(languages),
+    JSON.stringify(certifications)
+  ], (err) => {
+    if (err) {
+      console.error('Error updating profile:', err);
+      return res.status(500).send({ error: 'Failed to update profile', details: err });
+    }
+    console.log('Profile updated successfully');
+    res.send('Profile updated successfully');
+  });
+});
+
+// Login route
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const query = 'SELECT * FROM users WHERE email = ?';
-  db.query(query, [email], async (error, results) => {
+  const query = 'SELECT * FROM users WHERE email = ? AND password = ?';
+  db.query(query, [email, password], (error, results) => {
     if (error) {
       console.error('Database error during login:', error);
       return res.status(500).json({ error: 'Database error' });
     }
 
     if (results.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    const user = results[0];
-
-    // Compare the entered password with the stored hashed password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate a token
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.status(200).json({ message: 'Login successful', token });
+    res.status(200).json({ message: 'Login successful' });
   });
 });
 
-// Start the server
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
 
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(Server is running on port ${PORT});
+});
